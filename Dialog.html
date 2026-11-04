@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      body { margin: 0; padding: 16px 20px; font-size: 13px; color: #202124; background: #fff; min-height: 100vh; }
+      
+      .top-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+      .form-group { margin-bottom: 0; }
+      label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 11px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px; }
+      input, select { width: 100%; padding: 8px 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; outline: none; }
+      input:focus, select:focus { border-color: #1a73e8; box-shadow: 0 0 0 1px #1a73e8; }
+      
+      .btn-primary { width: 100%; padding: 10px; background: #1a73e8; color: #fff; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+      .btn-primary:hover { background: #1557b0; }
+      .btn-primary:disabled { background: #dadce0; cursor: not-allowed; }
+      
+      .btn-confirm { width: 100%; padding: 11px; background: #137333; color: #fff; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; margin-top: 12px; font-size: 14px; }
+      .btn-confirm:hover { background: #0d5c28; }
+      .btn-confirm:disabled { background: #dadce0; cursor: not-allowed; }
+      
+      .btn-reroll { width: 100%; padding: 8px; background: #d93025; color: #fff; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; margin-top: 8px; font-size: 13px; }
+      .btn-reroll:hover { background: #b3261e; }
+      .btn-reroll:disabled { background: #f1f3f4; color: #9aa0a6; cursor: not-allowed; }
+      
+      .btn-reverse { width: 100%; padding: 9px; background: #ea8600; color: #fff; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; margin-top: 8px; font-size: 13px; }
+      .btn-reverse:hover { background: #c26f00; }
+      
+      #results { margin-top: 16px; display: none; }
+      .alert { background: #fef7e0; border-left: 4px solid #f9ab00; padding: 8px 12px; font-size: 12px; margin-bottom: 10px; border-radius: 2px; }
+      .alert-error { background: #fce8e6; border-left: 4px solid #d93025; color: #c5221f; }
+      
+      .card { border: 1px solid #e8eaed; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #f8f9fa; }
+      .card-header { display: flex; align-items: center; justify-content: space-between; }
+      .card-title-group { display: flex; align-items: center; gap: 8px; }
+      .ex-title { font-weight: 600; font-size: 14px; text-transform: capitalize; }
+      .ex-meta { font-size: 12px; color: #5f6368; margin-top: 4px; }
+      
+      .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+      .badge-heavy { background: #fce8e6; color: #c5221f; }
+      .badge-moderate { background: #feefe3; color: #d93025; }
+      .badge-light { background: #e6f4ea; color: #137333; }
+      
+      .muscle-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+      .muscle-chip { display: inline-flex; align-items: center; gap: 4px; background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 12px; font-size: 11px; cursor: pointer; user-select: none; }
+      .muscle-chip.excluded { background: #fce8e6; color: #c5221f; text-decoration: line-through; }
+      
+      .exclude-ex-label { font-size: 11px; color: #d93025; font-weight: 600; display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+      
+      .btn-modify { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
+      .btn-modify:hover { background: #e8f0fe; }
+      .btn-modify.active { background: #1a73e8; color: #fff; }
+      
+      .summary-pills { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+      .pill { background: #e8f0fe; color: #1a73e8; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+      .section-subtitle { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 6px 0; font-size: 13px; font-weight: 600; }
+      .reset-link { font-size: 11px; color: #1a73e8; text-decoration: underline; cursor: pointer; font-weight: normal; }
+
+      /* In-place content-fitting editor */
+      .editor-container { margin-top: 10px; padding: 10px; background: #ffffff; border: 1px solid #dadce0; border-radius: 4px; display: none; }
+      .editor-table-wrap { width: 100%; overflow: visible; display: flex; justify-content: center; }
+      
+      .editor-table { border-collapse: collapse; font-size: 12px; width: max-content; table-layout: auto; }
+      .editor-table td, .editor-table th { border: 1px solid #dadce0; padding: 4px 7px; text-align: center; white-space: nowrap; }
+      
+      .cell-functional { background: #f1f3f4; color: #3c4043; font-weight: 500; user-select: none; }
+      .cell-editable { background: #fff; padding: 2px !important; }
+      
+      .cell-editable input {
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 12px;
+        text-align: center;
+        padding: 3px 4px;
+        min-width: 36px;
+        max-width: 58px;
+        box-sizing: border-box;
+      }
+      .cell-editable input.input-text {
+        min-width: 120px;
+        max-width: 260px;
+        text-align: left;
+      }
+      .cell-editable input:focus { background: #e8f0fe; font-weight: 600; border-radius: 2px; }
+      
+      .cell-diff { background: #fef7e0 !important; border: 1.5px solid #f9ab00 !important; font-weight: 600; }
+      .editor-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+      .btn-sm-save { background: #137333; color: #fff; border: none; border-radius: 3px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; }
+      .btn-sm-cancel { background: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; border-radius: 3px; padding: 5px 10px; font-size: 11px; cursor: pointer; }
+
+      /* Loading Overlay */
+      #loaderOverlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(255, 255, 255, 0.94);
+        z-index: 999;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+      }
+      .spinner {
+        width: 38px;
+        height: 38px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #1a73e8;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 14px;
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .loader-text { font-size: 14px; font-weight: 600; color: #202124; }
+      .loader-subtext { font-size: 12px; color: #5f6368; margin-top: 4px; }
+      
+      #successView { display: none; text-align: center; padding: 40px 10px; }
+      .success-icon { font-size: 44px; color: #137333; margin-bottom: 10px; }
+    </style>
+  </head>
+  <body>
+    <!-- Spinner Overlay -->
+    <div id="loaderOverlay">
+      <div class="spinner"></div>
+      <div id="loaderMainText" class="loader-text">Updating workouts...</div>
+      <div id="loaderSubText" class="loader-subtext">Refreshing dashboard & syncing colors</div>
+    </div>
+
+    <!-- Success View -->
+    <div id="successView">
+      <div class="success-icon">✓</div>
+      <h3 style="margin: 0 0 8px 0; font-size: 16px;">Workout Confirmed!</h3>
+      <p style="color: #5f6368; font-size: 13px; margin: 0 0 20px 0;">All exercise sheets have been updated and the Dashboard has been sorted.</p>
+      <button class="btn-primary" onclick="closeDialog()">Close Window</button>
+      <button class="btn-reverse" onclick="reverseWorkout()">Reverse Changes (Undo)</button>
+    </div>
+
+    <!-- Main View -->
+    <div id="mainFormView">
+      <div class="top-controls">
+        <div class="form-group">
+          <label>Day Type</label>
+          <select id="dayType" onchange="resetExclusions()">
+            <option value="heavy">Heavy Day (Heavy & Moderate)</option>
+            <option value="light">Light Day (Light & Moderate)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="dateInput">
+        </div>
+        <div class="form-group">
+          <label>Target Muscles</label>
+          <input type="number" id="targetMuscles" value="5" min="1" max="15">
+        </div>
+      </div>
+
+      <button id="submitBtn" class="btn-primary" onclick="initiateSelection()">Generate Workout</button>
+
+      <div id="results">
+        <div id="alertBox" class="alert" style="display:none;"></div>
+
+        <div class="section-subtitle">
+          <span>Targeted Muscles (<span id="muscleCount">0</span>)</span>
+        </div>
+        <div id="musclePills" class="summary-pills"></div>
+
+        <div class="section-subtitle">
+          <span>Selected Exercises</span>
+          <span class="reset-link" onclick="clearExclusionsAndRerun()">Clear Exclusions</span>
+        </div>
+        <div id="exerciseList"></div>
+
+        <button id="rerollBtn" class="btn-reroll" onclick="triggerReroll()" disabled>Re-roll with Exclusions</button>
+        <button id="confirmBtn" class="btn-confirm" onclick="confirmSelected()">Confirm & Update Dashboard</button>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+
+      let excludedExercises = new Set();
+      let excludedMuscles = new Set();
+      let currentSelection = [];
+      let lastConfirmedSnapshotId = null;
+      let exerciseModifications = {};
+      let activeSectionData = {};
+
+      function resizeDialogAuto() {
+        if (!google || !google.script || !google.script.host) return;
+        setTimeout(function() {
+          let maxContentW = 540;
+          const openEditors = document.querySelectorAll('.editor-container');
+          openEditors.forEach(ed => {
+            if (ed.style.display === 'block') {
+              const table = ed.querySelector('table');
+              if (table) {
+                maxContentW = Math.max(maxContentW, table.offsetWidth + 80);
+              }
+            }
+          });
+          const targetWidth = Math.min(Math.max(540, maxContentW), 1050);
+          const scrollH = document.documentElement.scrollHeight || document.body.scrollHeight;
+          const targetHeight = Math.min(Math.max(scrollH + 40, 520), 920);
+          google.script.host.setWidth(targetWidth);
+          google.script.host.setHeight(targetHeight);
+        }, 60);
+      }
+
+      function showLoader(mainText, subText) {
+        document.getElementById('loaderMainText').innerText = mainText || 'Loading...';
+        document.getElementById('loaderSubText').innerText = subText || '';
+        document.getElementById('loaderOverlay').style.display = 'flex';
+      }
+
+      function hideLoader() {
+        document.getElementById('loaderOverlay').style.display = 'none';
+      }
+
+      function closeDialog() {
+        google.script.host.close();
+      }
+
+      function resetExclusions() {
+        excludedExercises.clear();
+        excludedMuscles.clear();
+        exerciseModifications = {};
+        activeSectionData = {};
+        updateRerollBtn();
+      }
+
+      function clearExclusionsAndRerun() {
+        resetExclusions();
+        triggerReroll();
+      }
+
+      function initiateSelection() {
+        resetExclusions();
+        runServerSelection();
+      }
+
+      function triggerReroll() {
+        exerciseModifications = {};
+        activeSectionData = {};
+        runServerSelection();
+      }
+
+      function runServerSelection() {
+        const btn = document.getElementById('submitBtn');
+        const rerollBtn = document.getElementById('rerollBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+
+        btn.disabled = true;
+        rerollBtn.disabled = true;
+        if (confirmBtn) confirmBtn.disabled = true;
+        btn.innerText = 'Selecting...';
+
+        const dayType = document.getElementById('dayType').value;
+        const dateStr = document.getElementById('dateInput').value;
+        const targetMuscles = parseInt(document.getElementById('targetMuscles').value, 10) || 5;
+
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onError)
+          .runSelection(
+            dayType, 
+            dateStr, 
+            targetMuscles, 
+            Array.from(excludedExercises), 
+            Array.from(excludedMuscles)
+          );
+      }
+
+      function toggleExerciseExclusion(exName, checkbox) {
+        if (checkbox.checked) {
+          excludedExercises.add(exName);
+        } else {
+          excludedExercises.delete(exName);
+        }
+        updateRerollBtn();
+      }
+
+      function toggleMuscleExclusion(muscle, chipElem) {
+        if (excludedMuscles.has(muscle)) {
+          excludedMuscles.delete(muscle);
+          chipElem.classList.remove('excluded');
+        } else {
+          excludedMuscles.add(muscle);
+          chipElem.classList.add('excluded');
+        }
+        updateRerollBtn();
+      }
+
+      function updateRerollBtn() {
+        const total = excludedExercises.size + excludedMuscles.size;
+        const btn = document.getElementById('rerollBtn');
+        if (total > 0) {
+          btn.disabled = false;
+          btn.innerText = `Re-roll Excluded (${total})`;
+        } else {
+          btn.disabled = true;
+          btn.innerText = 'Re-roll with Exclusions';
+        }
+      }
+
+      function onSuccess(response) {
+        const btn = document.getElementById('submitBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+
+        btn.disabled = false;
+        btn.innerText = 'Generate Workout';
+
+        if (response.error) {
+          alert('Error: ' + response.error);
+          return;
+        }
+
+        currentSelection = response.selected || [];
+        const resDiv = document.getElementById('results');
+        const alertBox = document.getElementById('alertBox');
+        const listDiv = document.getElementById('exerciseList');
+        const pillsDiv = document.getElementById('musclePills');
+        const countSpan = document.getElementById('muscleCount');
+
+        resDiv.style.display = 'block';
+
+        if (response.isPartial) {
+          alertBox.className = 'alert alert-error';
+          alertBox.innerText = `Could not reach target count (${response.target}). Displaying best partial match with ${response.muscles.length} muscles.`;
+          alertBox.style.display = 'block';
+        } else if (response.relaxedNote) {
+          alertBox.className = 'alert';
+          alertBox.innerText = `Notice: Rules were relaxed (${response.relaxedNote}) to satisfy ${response.target} muscles.`;
+          alertBox.style.display = 'block';
+        } else {
+          alertBox.style.display = 'none';
+        }
+
+        countSpan.innerText = response.muscles.length;
+        pillsDiv.innerHTML = response.muscles.map(m => `<span class="pill">${m}</span>`).join('');
+
+        if (currentSelection.length === 0) {
+          listDiv.innerHTML = '<p style="color:#5f6368; font-size:13px; text-align:center; padding:12px 0;">No eligible exercises found matching the criteria and exclusions.</p>';
+          confirmBtn.disabled = true;
+          updateRerollBtn();
+          resizeDialogAuto();
+          return;
+        }
+
+        confirmBtn.disabled = false;
+        listDiv.innerHTML = currentSelection.map(ex => {
+          const isExExcluded = excludedExercises.has(ex.name);
+          const hasEdits = !!exerciseModifications[ex.name];
+          const editBtnText = hasEdits ? 'Edited ✓' : 'Modify';
+
+          return `
+            <div class="card" id="card-${escapeId(ex.name)}">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <span class="ex-title">${ex.name}</span>
+                  <span class="badge badge-${ex.category}">${ex.category}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <button type="button" class="btn-modify ${hasEdits ? 'active' : ''}" onclick="toggleModifySection('${escapeQuotes(ex.name)}')">${editBtnText}</button>
+                  <label class="exclude-ex-label">
+                    <input type="checkbox" ${isExExcluded ? 'checked' : ''} onchange="toggleExerciseExclusion('${escapeQuotes(ex.name)}', this)"> EXCLUDE
+                  </label>
+                </div>
+              </div>
+              <div class="ex-meta">
+                <strong>Last:</strong> ${ex.lastSession || 'Never'} (${ex.status})
+              </div>
+              <div class="muscle-tags">
+                ${ex.muscles.map(m => {
+                  const isMExcluded = excludedMuscles.has(m);
+                  return `<span class="muscle-chip ${isMExcluded ? 'excluded' : ''}" onclick="toggleMuscleExclusion('${escapeQuotes(m)}', this)">✕ ${m}</span>`;
+                }).join('')}
+              </div>
+              <div class="editor-container" id="editor-${escapeId(ex.name)}">
+                <div style="text-align:center; padding:10px; font-size:11px; color:#5f6368;">Loading workout section...</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        updateRerollBtn();
+        resizeDialogAuto();
+      }
+
+      function toggleModifySection(exName) {
+        const editorBox = document.getElementById(`editor-${escapeId(exName)}`);
+        if (!editorBox) return;
+
+        if (editorBox.style.display === 'block') {
+          editorBox.style.display = 'none';
+          resizeDialogAuto();
+          return;
+        }
+
+        editorBox.style.display = 'block';
+        editorBox.innerHTML = '<div style="text-align:center; padding:10px; font-size:11px; color:#5f6368;">Fetching section data...</div>';
+        resizeDialogAuto();
+
+        const selectedDateStr = document.getElementById('dateInput').value;
+
+        google.script.run
+          .withSuccessHandler(function(data) {
+            if (data.error) {
+              editorBox.innerHTML = `<div style="color:#d93025; font-size:12px; padding:6px;">${data.error}</div>`;
+              resizeDialogAuto();
+              return;
+            }
+            activeSectionData[exName] = data;
+            renderEditorTable(exName);
+          })
+          .withFailureHandler(function(err) {
+            editorBox.innerHTML = `<div style="color:#d93025; padding:6px; font-size:11px;">Error: ${err.message}</div>`;
+            resizeDialogAuto();
+          })
+          .getSectionForModification(exName, selectedDateStr);
+      }
+
+      function colLetterToNum(col) {
+        let num = 0;
+        const upper = col.toUpperCase();
+        for (let i = 0; i < upper.length; i++) {
+          num = num * 26 + (upper.charCodeAt(i) - 64);
+        }
+        return num;
+      }
+
+      function numToColLetter(num) {
+        let col = '';
+        while (num > 0) {
+          const rem = (num - 1) % 26;
+          col = String.fromCharCode(65 + rem) + col;
+          num = Math.floor((num - 1) / 26);
+        }
+        return col;
+      }
+
+      function evaluateFormula(formulaStr, cellMap) {
+        if (!formulaStr || !formulaStr.startsWith('=')) return null;
+        let expr = formulaStr.substring(1).trim();
+
+        // 1. Expand range syntax (e.g. E116:E120)
+        expr = expr.replace(/\$?([A-Za-z]+)\$?([0-9]+):\$?([A-Za-z]+)\$?([0-9]+)/g, function(match, c1, r1, c2, r2) {
+          const n1 = colLetterToNum(c1);
+          const n2 = colLetterToNum(c2);
+          const startR = Math.min(parseInt(r1, 10), parseInt(r2, 10));
+          const endR = Math.max(parseInt(r1, 10), parseInt(r2, 10));
+          const startC = Math.min(n1, n2);
+          const endC = Math.max(n1, n2);
+          const values = [];
+
+          for (let r = startR; r <= endR; r++) {
+            for (let c = startC; c <= endC; c++) {
+              const ref = numToColLetter(c) + r;
+              let v = cellMap[ref];
+              let num = Number(v);
+              values.push(isNaN(num) || v === '' ? 0 : num);
+            }
+          }
+          return `[${values.join(',')}]`;
+        });
+
+        // 2. Expand SUM
+        expr = expr.replace(/SUM\s*\(([^)]+)\)/gi, function(match, inner) {
+          const cleaned = inner.trim();
+          if (cleaned.startsWith('[') && cleaned.endsWith(']')) {
+            const arr = cleaned.slice(1, -1).split(',');
+            return `(${arr.join(' + ') || 0})`;
+          }
+          return `(${cleaned})`;
+        });
+
+        // 3. Expand ROUND
+        expr = expr.replace(/ROUND\s*\(([^,]+),\s*([0-9]+)\)/gi, function(match, numExpr, dec) {
+          const d = Math.pow(10, parseInt(dec, 10));
+          return `(Math.round((${numExpr}) * ${d}) / ${d})`;
+        });
+
+        // 4. Single cell coordinate lookups
+        expr = expr.replace(/\$?([A-Za-z]+)\$?([0-9]+)/g, function(match, col, row) {
+          const ref = col.toUpperCase() + row;
+          let val = cellMap[ref];
+          if (val === undefined || val === null || val === '') return 0;
+          const num = Number(val);
+          if (!isNaN(num)) return String(num);
+          return JSON.stringify(String(val));
+        });
+
+        // 5. Replace & concatenation
+        let inQuote = false;
+        let tokenized = '';
+        for (let i = 0; i < expr.length; i++) {
+          const ch = expr[i];
+          if (ch === '"') inQuote = !inQuote;
+          if (ch === '&' && !inQuote) {
+            tokenized += '+';
+          } else {
+            tokenized += ch;
+          }
+        }
+
+        try {
+          const res = Function(`"use strict"; return (${tokenized});`)();
+          if (typeof res === 'number') {
+            if (isNaN(res)) return null;
+            return Math.round(res * 100) / 100;
+          }
+          return res;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function recalculateAllFormulas(exName) {
+        const data = activeSectionData[exName];
+        if (!data) return;
+
+        const cellMap = Object.assign({}, data.externalLookup);
+        const existingEdits = exerciseModifications[exName] || [];
+        const editMap = {};
+        existingEdits.forEach(e => {
+          editMap[`${e.rOffset}_${e.cOffset}`] = e.value;
+        });
+
+        for (let r = 0; r < data.numRows; r++) {
+          for (let c = 0; c < data.numCols; c++) {
+            const cell = data.cells[r][c];
+            if (!cell.isFunctional) {
+              const currentVal = editMap[`${r}_${c}`] !== undefined ? editMap[`${r}_${c}`] : cell.val;
+              cellMap[cell.cellRef] = currentVal;
+            } else if (!cell.formula) {
+              cellMap[cell.cellRef] = cell.val;
+            }
+          }
+        }
+
+        for (let pass = 0; pass < 3; pass++) {
+          for (let r = 0; r < data.numRows; r++) {
+            for (let c = 0; c < data.numCols; c++) {
+              const cell = data.cells[r][c];
+              if (r <= 2) continue;
+              if (cell.formula) {
+                const computed = evaluateFormula(cell.formula, cellMap);
+                if (computed !== null && computed !== undefined) {
+                  cellMap[cell.cellRef] = computed;
+                  const tdElem = document.getElementById(`td-${escapeId(exName)}-${r}-${c}`);
+                  if (tdElem) {
+                    tdElem.innerText = computed;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      function onTableCellInput(exName, r, c, inputElem) {
+        const data = activeSectionData[exName];
+        if (!data) return;
+
+        let rawVal = inputElem.value.trim();
+        let numVal = Number(rawVal);
+        let val = (rawVal !== '' && !isNaN(numVal)) ? numVal : rawVal;
+
+        if (!exerciseModifications[exName]) {
+          exerciseModifications[exName] = [];
+        }
+
+        const list = exerciseModifications[exName];
+        const idx = list.findIndex(e => e.rOffset === r && e.cOffset === c);
+        if (idx !== -1) {
+          list[idx].value = val;
+        } else {
+          list.push({ rOffset: r, cOffset: c, value: val });
+        }
+
+        // Difference highlight check
+        const baseVal = data.cells[r][c].baseVal;
+        const tdElem = inputElem.closest('td');
+        if (tdElem) {
+          if (String(val).trim() !== String(baseVal).trim()) {
+            tdElem.classList.add('cell-diff');
+          } else if (!data.cells[r][c].isDiff) {
+            tdElem.classList.remove('cell-diff');
+          }
+        }
+
+        recalculateAllFormulas(exName);
+      }
+
+      function renderEditorTable(exName) {
+        const editorBox = document.getElementById(`editor-${escapeId(exName)}`);
+        const data = activeSectionData[exName];
+        if (!editorBox || !data) return;
+
+        let tableHtml = '<div class="editor-table-wrap"><table class="editor-table">';
+        const existingEdits = exerciseModifications[exName] || [];
+        const editMap = {};
+        existingEdits.forEach(e => {
+          editMap[`${e.rOffset}_${e.cOffset}`] = e.value;
+        });
+
+        for (let r = 0; r < data.numRows; r++) {
+          tableHtml += '<tr>';
+          for (let c = 0; c < data.numCols; c++) {
+            const cell = data.cells[r][c];
+            const cellId = `td-${escapeId(exName)}-${r}-${c}`;
+
+            if (cell.isFunctional) {
+              let displayVal = cell.display;
+              let styleAttr = '';
+              // Preview date & status row styling
+              if (r === 1 && c === 0) {
+                styleAttr = 'style="color: #1b73e8; font-weight: 600;"';
+                displayVal = cell.val;
+              } else if (r === 2 && c === 0) {
+                styleAttr = 'style="color: #1b73e8; font-weight: 600;"';
+                displayVal = cell.val;
+              }
+              tableHtml += `<td id="${cellId}" class="cell-functional" ${styleAttr}>${escapeHtml(displayVal)}</td>`;
+            } else {
+              const currentVal = editMap[`${r}_${c}`] !== undefined ? editMap[`${r}_${c}`] : cell.val;
+              const hasEdited = editMap[`${r}_${c}`] !== undefined && String(currentVal).trim() !== String(cell.baseVal).trim();
+              const diffClass = (cell.isDiff || hasEdited) ? 'cell-diff' : '';
+              const isText = isNaN(Number(currentVal)) && String(currentVal).length > 6;
+              const inputClass = isText ? 'input-text' : '';
+
+              tableHtml += `
+                <td id="${cellId}" class="cell-editable ${diffClass}">
+                  <input type="text" 
+                         class="${inputClass}"
+                         data-row="${r}" 
+                         data-col="${c}" 
+                         oninput="onTableCellInput('${escapeQuotes(exName)}', ${r}, ${c}, this)"
+                         value="${escapeHtml(String(currentVal === null || currentVal === undefined ? '' : currentVal))}">
+                </td>`;
+            }
+          }
+          tableHtml += '</tr>';
+        }
+        tableHtml += '</table></div>';
+
+        tableHtml += `
+          <div class="editor-actions">
+            <button type="button" class="btn-sm-cancel" onclick="closeEditor('${escapeQuotes(exName)}')">Cancel</button>
+            <button type="button" class="btn-sm-save" onclick="saveEditorEdits('${escapeQuotes(exName)}')">Save Edits in Memory</button>
+          </div>
+        `;
+
+        editorBox.innerHTML = tableHtml;
+        recalculateAllFormulas(exName);
+        resizeDialogAuto();
+      }
+
+      function closeEditor(exName) {
+        const editorBox = document.getElementById(`editor-${escapeId(exName)}`);
+        if (editorBox) {
+          editorBox.style.display = 'none';
+          resizeDialogAuto();
+        }
+      }
+
+      function saveEditorEdits(exName) {
+        const editorBox = document.getElementById(`editor-${escapeId(exName)}`);
+        if (!editorBox) return;
+
+        editorBox.style.display = 'none';
+        const card = document.getElementById(`card-${escapeId(exName)}`);
+        if (card) {
+          const modBtn = card.querySelector('.btn-modify');
+          if (modBtn) {
+            modBtn.classList.add('active');
+            modBtn.innerText = 'Edited ✓';
+          }
+        }
+        resizeDialogAuto();
+      }
+
+      function confirmSelected() {
+        if (!currentSelection || currentSelection.length === 0) return;
+        const dateStr = document.getElementById('dateInput').value;
+
+        showLoader('Updating workouts...', 'Applying custom modifications, formulas & sorting dashboard');
+
+        google.script.run
+          .withSuccessHandler(onConfirmSuccess)
+          .withFailureHandler(onConfirmError)
+          .confirmWorkoutSelection(currentSelection, dateStr, exerciseModifications);
+      }
+
+      function onConfirmSuccess(res) {
+        hideLoader();
+        lastConfirmedSnapshotId = res.snapshotId;
+        google.script.host.close();
+      }
+
+      function onConfirmError(err) {
+        hideLoader();
+        alert('Failed to update workouts: ' + err.message);
+      }
+
+      function reverseWorkout() {
+        showLoader('Reversing changes...', 'Restoring previous workout dates, statuses and sorting');
+        google.script.run
+          .withSuccessHandler(function(res) {
+            hideLoader();
+            if (res.error) {
+              alert(res.error);
+            } else {
+              alert('Changes successfully reversed!');
+              document.getElementById('successView').style.display = 'none';
+              document.getElementById('mainFormView').style.display = 'block';
+              initiateSelection();
+            }
+          })
+          .withFailureHandler(function(err) {
+            hideLoader();
+            alert('Error during reverse: ' + err.message);
+          })
+          .reverseSnapshotById(lastConfirmedSnapshotId);
+      }
+
+      function onError(err) {
+        const btn = document.getElementById('submitBtn');
+        const rerollBtn = document.getElementById('rerollBtn');
+        btn.disabled = false;
+        rerollBtn.disabled = false;
+        btn.innerText = 'Generate Workout';
+        alert('Script Error: ' + err.message);
+      }
+
+      function escapeQuotes(str) {
+        return str.replace(/'/g, "\\'");
+      }
+
+      function escapeId(str) {
+        return str.replace(/[^a-zA-Z0-9_-]/g, '_');
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    </script>
+  </body>
+</html>

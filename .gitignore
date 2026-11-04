@@ -1,0 +1,12 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Google Clasp credentials
+.clasprc.json
+
+# Logs & temp files
+*.log
+scratch/
+update.py
